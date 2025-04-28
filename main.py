@@ -117,7 +117,16 @@ def cubic_approximation(x, y):
 
 def exponential_approximation(x, y):
     try:
-        x_valid, y_valid = zip(*[(x[i], y[i]) for i in range(len(x)) if y[i] > 0])
+        temp_x = []
+        temp_y = []
+
+        for xi, yi in zip(x, y):  # параллельный обход x и y
+            if yi > 0:
+                temp_x.append(xi)
+                temp_y.append(yi)
+
+        x_valid = tuple(temp_x)
+        y_valid = tuple(temp_y)
         ln_y = [math.log(i) for i in y_valid]
         coeffs, f = linear_approximation(x_valid, ln_y)
         if coeffs is None:
@@ -132,7 +141,16 @@ def exponential_approximation(x, y):
 def logarithmic_approximation(x, y):
     try:
         # Исключаем значения x <= 0, так как логарифм не определён для таких значений
-        x_valid, y_valid = zip(*[(x[i], y[i]) for i in range(len(x)) if x[i] > 0])
+        temp_x = []
+        temp_y = []
+
+        for xi, yi in zip(x, y):  # параллельный обход x и y
+            if yi > 0:
+                temp_x.append(xi)
+                temp_y.append(yi)
+
+        x_valid = tuple(temp_x)
+        y_valid = tuple(temp_y)
 
         # Применяем логарифм только к положительным значениям x
         ln_x = [math.log(i) for i in x_valid]
@@ -150,7 +168,17 @@ def logarithmic_approximation(x, y):
 
 def power_approximation(x, y):
     try:
-        x_valid, y_valid = zip(*[(x[i], y[i]) for i in range(len(x)) if x[i] > 0 and y[i] > 0])
+        temp_x = []
+        temp_y = []
+
+        for xi, yi in zip(x, y):  # параллельный обход x и y
+            if xi > 0 and yi > 0:
+                temp_x.append(xi)
+                temp_y.append(yi)
+
+        x_valid = tuple(temp_x)
+        y_valid = tuple(temp_y)
+
         ln_x = [math.log(i) for i in x_valid]
         ln_y = [math.log(i) for i in y_valid]
         coeffs, f = linear_approximation(ln_x, ln_y)
