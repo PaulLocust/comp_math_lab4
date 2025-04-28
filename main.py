@@ -1,10 +1,10 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
-import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import math
 import locale
+from matrix import solve_sle
 
 # Установим локаль для корректного распознавания разделителей
 locale.setlocale(locale.LC_ALL, '')
@@ -24,7 +24,31 @@ def parse_number(s):
             return None
 
 
-# Методы аппроксимации (остаются без изменений)
+def mean(values):
+    """Вычисляет среднее значение"""
+    return sum(values) / len(values) if len(values) > 0 else 0
+
+
+def correlation_coefficient(x, y):
+    """Вычисляет коэффициент корреляции Пирсона"""
+    n = len(x)
+    if n != len(y):
+        return 0
+
+    mean_x = mean(x)
+    mean_y = mean(y)
+
+    numerator = sum((x[i] - mean_x) * (y[i] - mean_y) for i in range(n))
+    denominator_x = sum((xi - mean_x) ** 2 for xi in x) ** 0.5
+    denominator_y = sum((yi - mean_y) ** 2 for yi in y) ** 0.5
+
+    if denominator_x == 0 or denominator_y == 0:
+        return 0
+
+    return numerator / (denominator_x * denominator_y)
+
+
+# Методы аппроксимации
 def linear_approximation(x, y):
     n = len(x)
     sx, sy = sum(x), sum(y)
@@ -40,16 +64,24 @@ def linear_approximation(x, y):
 
 def quadratic_approximation(x, y):
     n = len(x)
-    sx, sy = sum(x), sum(y)
+    sx = sum(x)
+    sy = sum(y)
     sxx = sum(i ** 2 for i in x)
     sxxx = sum(i ** 3 for i in x)
     sxxxx = sum(i ** 4 for i in x)
     sxy = sum(x[i] * y[i] for i in range(n))
     sxxy = sum((x[i] ** 2) * y[i] for i in range(n))
-    A = np.array([[n, sx, sxx], [sx, sxx, sxxx], [sxx, sxxx, sxxxx]])
-    B = np.array([sy, sxy, sxxy])
+
+    # Создаем матрицу коэффициентов и вектор правой части
+    A = [
+        [n, sx, sxx],
+        [sx, sxx, sxxx],
+        [sxx, sxxx, sxxxx]
+    ]
+    B = [sy, sxy, sxxy]
+
     try:
-        a, b, c = np.linalg.solve(A, B)
+        a, b, c = solve_sle(A, B, 3)
         return (a, b, c), lambda t: a + b * t + c * t ** 2
     except:
         return None
@@ -57,7 +89,8 @@ def quadratic_approximation(x, y):
 
 def cubic_approximation(x, y):
     n = len(x)
-    sx, sy = sum(x), sum(y)
+    sx = sum(x)
+    sy = sum(y)
     sxx = sum(i ** 2 for i in x)
     sxxx = sum(i ** 3 for i in x)
     sxxxx = sum(i ** 4 for i in x)
@@ -66,15 +99,17 @@ def cubic_approximation(x, y):
     sxy = sum(x[i] * y[i] for i in range(n))
     sxxy = sum((x[i] ** 2) * y[i] for i in range(n))
     sxxxy = sum((x[i] ** 3) * y[i] for i in range(n))
-    A = np.array([
+
+    A = [
         [n, sx, sxx, sxxx],
         [sx, sxx, sxxx, sxxxx],
         [sxx, sxxx, sxxxx, sxxxxx],
         [sxxx, sxxxx, sxxxxx, sxxxxxx]
-    ])
-    B = np.array([sy, sxy, sxxy, sxxxy])
+    ]
+    B = [sy, sxy, sxxy, sxxxy]
+
     try:
-        a, b, c, d = np.linalg.solve(A, B)
+        a, b, c, d = solve_sle(A, B, 4)
         return (a, b, c, d), lambda t: a + b * t + c * t ** 2 + d * t ** 3
     except:
         return None
@@ -128,17 +163,17 @@ def power_approximation(x, y):
         return None
 
 
-# Метрики качества (остаются без изменений)
+# Метрики качества
 def calculate_metrics(x, y, f):
     n = len(x)
     y_pred = [f(xi) for xi in x]
     residuals = [(y[i] - y_pred[i]) for i in range(n)]
     S = sum(resid ** 2 for resid in residuals)
     sigma = (S / n) ** 0.5
-    y_mean = np.mean(y)
+    y_mean = mean(y)
     St = sum((yi - y_mean) ** 2 for yi in y)
     R2 = 1 - S / St if St != 0 else 0
-    r = np.corrcoef(y, y_pred)[0, 1]
+    r = correlation_coefficient(y, y_pred)
     return sigma, R2, S, r
 
 
@@ -239,7 +274,7 @@ class App:
             ("Степенная", power_approximation, "f(x) = a * xi^b"),
         ]
         colors = ["red", "green", "blue", "orange", "purple", "cyan"]
-        t = np.linspace(min(self.x), max(self.x), 500)
+        t = [min(self.x) + i * (max(self.x) - min(self.x)) / 500 for i in range(500)]
 
         best_R2 = -float("inf")
         best_method = ""
@@ -257,7 +292,7 @@ class App:
 
             self.result_text += f"{name} функция:\n"
             self.result_text += f"*  Функция: {formula}\n"
-            self.result_text += f"*  Коэффициенты: {list(np.round(coeffs, 4))}\n"
+            self.result_text += f"*  Коэффициенты: {[round(c, 4) for c in coeffs]}\n"
             self.result_text += f"*  Среднеквадратичное отклонение: σ = {sigma:.5f}\n"
             self.result_text += f"*  Коэффициент детерминации: R^2 = {R2:.5f}\n"
             self.result_text += f"*  Мера отклонения: S = {S:.5f}\n"
@@ -284,7 +319,6 @@ class App:
             with open(filename, "w", encoding="utf-8") as file:
                 file.write(self.result_text)
             messagebox.showinfo("Успех", f"Результат сохранён в {filename}")
-
 
 
 # Запуск
