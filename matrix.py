@@ -10,7 +10,7 @@ def solve2(A, B):
     x2 = det2 / det
     return x1, x2
 
-
+# Метод Саррюса
 def calc_det3(A):
     pos = A[0][0] * A[1][1] * A[2][2] + \
           A[0][1] * A[1][2] * A[2][0] + \
